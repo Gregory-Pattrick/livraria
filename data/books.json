@@ -1,0 +1,22 @@
+[
+    {
+        "id": 1,
+        "title": "Clean Code",
+        "author": "Robert C. Martin",
+        "category": "Software Engineering",
+        "published_year": 2008,
+        "status": "available",
+        "created_at": "2026-04-29T00:00:00-03:00",
+        "updated_at": "2026-04-29T10:35:53+02:00"
+    },
+    {
+        "id": 2,
+        "title": "Domain-Driven Design",
+        "author": "Eric Evans",
+        "category": "Architecture",
+        "published_year": 2003,
+        "status": "borrowed",
+        "created_at": "2026-04-29T00:00:00-03:00",
+        "updated_at": "2026-04-29T00:00:00-03:00"
+    }
+]
