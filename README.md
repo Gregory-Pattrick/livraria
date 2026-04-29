@@ -1,4 +1,4 @@
-# Library API MVC
+# Livraria MVC
 
 API simples para gerenciamento de livros.
 
