@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Livraria MVC</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg bg-dark navbar-dark">
+    <div class="container">
+        <span class="navbar-brand fw-bold">Livraria</span>
+        <a class="btn btn-outline-light btn-sm" href="/api/books" target="_blank">Ver JSON</a>
+    </div>
+</nav>
+
+<main class="container py-5">
+    <section class="row align-items-center g-4 mb-5">
+        <div class="col-lg-7">
+            <h1 class="display-5 fw-bold">Livraria online</h1>
+            <p class="lead text-secondary">Um CRUD de livros com separação em Controller, Model, Repository e camada de resposta. A interface consome a própria API usando GET, POST, PUT e DELETE.</p>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="/api/books" target="_blank" class="btn btn-primary">Listar Livros</a>
+                <a href="#endpoints" class="btn btn-outline-secondary">Ver endpoints</a>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 fw-bold mb-0" id="formTitle">Cadastrar livro</h2>
+                        <button id="cancelEdit" class="btn btn-outline-secondary btn-sm d-none" type="button">Cancelar edição</button>
+                    </div>
+                    <form id="bookForm" class="vstack gap-3">
+                        <input type="hidden" name="id" id="bookId">
+                        <input class="form-control" name="title" placeholder="Título" required>
+                        <input class="form-control" name="author" placeholder="Autor" required>
+                        <input class="form-control" name="category" placeholder="Categoria" required>
+                        <input class="form-control" name="published_year" type="number" placeholder="Ano de publicação" required>
+                        <select class="form-select" name="status">
+                            <option value="available">Disponível</option>
+                            <option value="borrowed">Emprestado</option>
+                        </select>
+                        <button class="btn btn-success" type="submit" id="submitButton">Cadastrar</button>
+                    </form>
+                    <div id="feedback" class="small mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h4 fw-bold mb-0">Livros cadastrados</h2>
+                <button id="reload" class="btn btn-outline-primary btn-sm">Atualizar</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Título</th>
+                        <th>Autor</th>
+                        <th>Categoria</th>
+                        <th>Ano</th>
+                        <th>Status</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                    </thead>
+                    <tbody id="booksTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section id="endpoints" class="row g-3">
+        <div class="col-md-6 col-lg-4"><div class="card h-100 border-0 shadow-sm"><div class="card-body"><span class="badge text-bg-success">GET</span><code class="d-block mt-2">/api/books</code><p class="text-secondary mb-0">Lista todos os livros.</p></div></div></div>
+        <div class="col-md-6 col-lg-4"><div class="card h-100 border-0 shadow-sm"><div class="card-body"><span class="badge text-bg-success">GET</span><code class="d-block mt-2">/api/books/1</code><p class="text-secondary mb-0">Busca um livro por ID.</p></div></div></div>
+        <div class="col-md-6 col-lg-4"><div class="card h-100 border-0 shadow-sm"><div class="card-body"><span class="badge text-bg-primary">POST</span><code class="d-block mt-2">/api/books</code><p class="text-secondary mb-0">Cadastra um novo livro.</p></div></div></div>
+        <div class="col-md-6 col-lg-4"><div class="card h-100 border-0 shadow-sm"><div class="card-body"><span class="badge text-bg-warning">PUT</span><code class="d-block mt-2">/api/books/1</code><p class="text-secondary mb-0">Atualiza um livro.</p></div></div></div>
+        <div class="col-md-6 col-lg-4"><div class="card h-100 border-0 shadow-sm"><div class="card-body"><span class="badge text-bg-danger">DELETE</span><code class="d-block mt-2">/api/books/1</code><p class="text-secondary mb-0">Remove um livro.</p></div></div></div>
+    </section>
+</main>
+
+<script>
+const table = document.querySelector('#booksTable');
+const feedback = document.querySelector('#feedback');
+const form = document.querySelector('#bookForm');
+const formTitle = document.querySelector('#formTitle');
+const submitButton = document.querySelector('#submitButton');
+const cancelEdit = document.querySelector('#cancelEdit');
+let booksCache = [];
+
+function showFeedback(message, type = 'success') {
+    feedback.innerHTML = `<div class="alert alert-${type} py-2 mb-0">${message}</div>`;
+    setTimeout(() => feedback.innerHTML = '', 3500);
+}
+
+function resetForm() {
+    form.reset();
+    document.querySelector('#bookId').value = '';
+    formTitle.textContent = 'Cadastrar livro';
+    submitButton.textContent = 'Cadastrar';
+    submitButton.className = 'btn btn-success';
+    cancelEdit.classList.add('d-none');
+}
+
+async function loadBooks() {
+    const response = await fetch('/api/books');
+    const json = await response.json();
+    booksCache = json.data || [];
+
+    if (booksCache.length === 0) {
+        table.innerHTML = `<tr><td colspan="7" class="text-center text-secondary py-4">Nenhum livro cadastrado.</td></tr>`;
+        return;
+    }
+
+    table.innerHTML = booksCache.map(book => `
+        <tr>
+            <td>${book.id}</td>
+            <td class="fw-semibold">${book.title}</td>
+            <td>${book.author}</td>
+            <td>${book.category}</td>
+            <td>${book.published_year}</td>
+            <td><span class="badge ${book.status === 'available' ? 'text-bg-success' : 'text-bg-secondary'}">${book.status}</span></td>
+            <td class="text-end">
+                <button class="btn btn-info btn-sm me-1" onclick="editBook(${book.id})">Editar</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteBook(${book.id})">Excluir</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function editBook(id) {
+    const book = booksCache.find(item => Number(item.id) === Number(id));
+    if (!book) {
+        showFeedback('Livro não encontrado para edição.', 'danger');
+        return;
+    }
+
+    form.id.value = book.id;
+    form.title.value = book.title;
+    form.author.value = book.author;
+    form.category.value = book.category;
+    form.published_year.value = book.published_year;
+    form.status.value = book.status;
+
+    formTitle.textContent = `Editando livro #${book.id}`;
+    submitButton.textContent = 'Atualizar';
+    submitButton.className = 'btn btn-warning';
+    cancelEdit.classList.remove('d-none');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function deleteBook(id) {
+    const confirmed = confirm(`Deseja realmente excluir o livro #${id}?`);
+    if (!confirmed) return;
+
+    const response = await fetch(`/api/books/${id}`, { method: 'DELETE' });
+    const json = await response.json();
+
+    if (!response.ok) {
+        showFeedback(json.message || 'Erro ao excluir livro.', 'danger');
+        return;
+    }
+
+    showFeedback(json.message || 'Livro removido com sucesso.');
+    resetForm();
+    await loadBooks();
+}
+
+form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const formData = new FormData(form);
+    const payload = Object.fromEntries(formData.entries());
+    const id = payload.id;
+    delete payload.id;
+    payload.published_year = Number(payload.published_year);
+
+    const isEditing = Boolean(id);
+    const response = await fetch(isEditing ? `/api/books/${id}` : '/api/books', {
+        method: isEditing ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    const json = await response.json();
+    if (!response.ok) {
+        const errors = json.errors ? Object.values(json.errors).flat().join(' ') : '';
+        showFeedback(`${json.message || 'Erro ao salvar livro.'} ${errors}`, 'danger');
+        return;
+    }
+
+    showFeedback(json.message || 'Operação realizada com sucesso.');
+    resetForm();
+    await loadBooks();
+});
+
+cancelEdit.addEventListener('click', resetForm);
+document.querySelector('#reload').addEventListener('click', loadBooks);
+loadBooks();
+</script>
+</body>
+</html>
